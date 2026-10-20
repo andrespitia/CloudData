@@ -219,18 +219,10 @@ El sistema tiene dos microservicios en Python con responsabilidades separadas. N
 
 ### 5.5 Capa de persistencia
 
-**Componente** 
-
- 5.5.1 Azure Blob Storage 
- 5.5.2 Azure SQL Database 
- 
- **Qué guarda** 
- 5.5.1 `raw/`: archivo original tal como llegó. `processed/`: archivo depurado
- 5.5.2 Ventas e inventario consolidados
- 
- **Para qué** 
- 5.5.1 Consultas rápidas y consistentes del Microservicio 2 y de Power BI 
- 5.5.2 Trazabilidad: cualquier dato del reporte se puede rastrear hasta su archivo de origen
+| Componente | Qué guarda | Para qué |
+| --- | --- | --- |
+| Azure Blob Storage | `raw/`: archivo original tal como llegó. `processed/`: archivo depurado | Trazabilidad: cualquier dato del reporte se puede rastrear hasta su archivo de origen |
+| Azure SQL Database | Ventas e inventario consolidados | Consultas rápidas y consistentes del Microservicio 2 y de Power BI |
 
 
 ### 5.6 Protocolos de comunicación
@@ -251,44 +243,57 @@ El sistema tiene dos microservicios en Python con responsabilidades separadas. N
 - Escalado independiente: el de carga crece en los cierres de mes y el de reportes cuando la gerencia consulta.
 - Tolerancia a fallos: si el Microservicio 1 falla, los reportes siguen disponibles con los datos ya consolidados.
   
---------------------------------------------------------------------
+----------------------------------------------------------
 ## 6. Especificación de la API REST
---------------------------------------------------------------------
-### 6.1 Convenciones
+----------------------------------------------------------
 
-- URL base: cada microservicio tiene su propia dirección en Azure Container Apps, por ejemplo `https://carga-limpieza.<entorno>.azurecontainerapps.io` y `https://reportes.<entorno>.azurecontainerapps.io`.
-- Formato: JSON en UTF-8. Fechas en ISO 8601 (`AAAA-MM-DD`). Montos en pesos, sin separadores de miles.
-- Errores: código HTTP adecuado y cuerpo `{"detail": "mensaje"}`.
-- Documentación interactiva: cada servicio publica su especificación OpenAPI en `/docs`.
+Por ahora la aplicación se ejecuta **en local**: cada microservicio corre en el computador del desarrollador con FastAPI y uvicorn, y el código se gestiona en GitHub. El despliegue en Azure queda como etapa posterior; los endpoints no cambian al pasar a la nube, solo cambia la URL base.
 
-### 6.2 Resumen de endpoints
+### 6.1 Entorno de ejecución local
 
- Servicio  Verbo  Ruta  Descripción  Respuesta 
- ---  ---  ---  ---  --- 
- Carga y limpieza  `POST`  `/upload`  Sube y procesa un archivo de ventas  `201 Created` 
- Carga y limpieza  `GET`  `/cargas/{id_carga}`  Informe de calidad de una carga (planificado, hito 2)  `200 OK` 
- Carga y limpieza  `GET`  `/health`  Estado del servicio  `200 OK` 
- Reportes  `GET`  `/kpi/ventas`  Ventas totales, número de ventas y ticket promedio  `200 OK` 
- Reportes  `GET`  `/kpi/ventas-por-tienda`  Total vendido por tienda, de mayor a menor  `200 OK` 
- Reportes  `GET`  `/kpi/top-productos?limite=5`  Productos más vendidos por unidades  `200 OK` 
- Reportes  `GET`  `/kpi/ventas-por-dia?desde=&hasta=`  Tendencia diaria de ventas  `200 OK` 
- Reportes  `GET`  `/kpi/inventario-bajo-stock?minimo=10`  Productos con inventario bajo (planificado, hito 3)  `200 OK` 
- Reportes  `GET`  `/health`  Estado del servicio  `200 OK` 
+| Microservicio | Carpeta | Comando para iniciarlo | URL base local | Documentación interactiva |
+| --- | --- | --- | --- | --- |
+| Carga y limpieza | `services/carga-limpieza` | `uvicorn app.main:app --reload --port 8000` | `http://localhost:8000` | `http://localhost:8000/docs` |
+| Reportes | `services/reportes` | `uvicorn app.main:app --reload --port 8001` | `http://localhost:8001` | `http://localhost:8001/docs` |
 
-### 6.3 Microservicio 1 – Carga y limpieza
+Cada servicio usa un **puerto distinto** porque son procesos independientes, igual que serían dos contenedores separados en la nube.
+
+**Datos en local:** el Microservicio 2 lee las ventas consolidadas desde el archivo `services/reportes/datos/ventas_consolidadas.csv` (variable de entorno `VENTAS_FUENTE`), que hace las veces de la base de datos mientras no se use Azure SQL.
+
+### 6.2 Convenciones
+
+- **Formato:** JSON en UTF-8. Fechas en ISO 8601 (`AAAA-MM-DD`). Montos en pesos, sin separadores de miles.
+- **Errores:** código HTTP adecuado y cuerpo `{"detail": "mensaje"}`.
+- **Documentación interactiva:** FastAPI genera la especificación OpenAPI en `/docs`, donde cada endpoint se puede probar desde el navegador con **Try it out → Execute**.
+
+### 6.3 Resumen de endpoints
+
+| Servicio | Verbo | Ruta | Descripción | Respuesta | Estado |
+| --- | --- | --- | --- | --- | --- |
+| Carga y limpieza (`:8000`) | `POST` | `/upload` | Sube y procesa un archivo de ventas | `201 Created` | Implementado |
+| Carga y limpieza (`:8000`) | `GET` | `/cargas/{id_carga}` | Informe de calidad de una carga | `200 OK` | Planificado |
+| Carga y limpieza (`:8000`) | `GET` | `/health` | Estado del servicio | `200 OK` | Implementado |
+| Reportes (`:8001`) | `GET` | `/kpi/ventas` | Ventas totales, número de ventas y ticket promedio | `200 OK` | Implementado |
+| Reportes (`:8001`) | `GET` | `/kpi/ventas-por-tienda` | Total vendido por tienda, de mayor a menor | `200 OK` | Implementado |
+| Reportes (`:8001`) | `GET` | `/kpi/top-productos?limite=5` | Productos más vendidos por unidades | `200 OK` | Implementado |
+| Reportes (`:8001`) | `GET` | `/kpi/ventas-por-dia?desde=&hasta=` | Tendencia diaria de ventas | `200 OK` | Implementado |
+| Reportes (`:8001`) | `GET` | `/kpi/inventario-bajo-stock?minimo=10` | Productos con inventario bajo | `200 OK` | Planificado |
+| Reportes (`:8001`) | `GET` | `/health` | Estado del servicio | `200 OK` | Implementado |
+
+### 6.4 Microservicio 1 – Carga y limpieza
 
 #### `POST /upload`
 
 Sube un archivo de ventas (CSV, XLSX o XML) y aplica las reglas de calidad. Columnas obligatorias: `id_venta`, `fecha`, `tienda`, `producto`, `cantidad`, `precio`.
 
-Petición (`multipart/form-data`):
+**Petición** (`multipart/form-data`), desde la raíz del repositorio:
 
 ```bash
-curl -X POST "https://carga-limpieza.<entorno>.azurecontainerapps.io/upload" \
-     -F "archivo=@ventas.csv"
+curl -X POST "http://localhost:8000/upload" \
+     -F "archivo=@data-samples/ventas.csv"
 ```
 
-Respuesta `201 Created`:
+**Respuesta `201 Created`:**
 
 ```json
 {
@@ -305,22 +310,42 @@ Respuesta `201 Created`:
 }
 ```
 
-Errores:
+**Errores:**
 
- Código  Causa  Cuerpo 
- ---  ---  --- 
- `415`  Formato no soportado  `{"detail": "Formato no soportado. Use CSV, XLSX o XML."}` 
- `422`  Faltan columnas obligatorias  `{"detail": "Faltan columnas obligatorias: ['precio']"}` 
+| Código | Causa | Cuerpo |
+| --- | --- | --- |
+| `415` | Formato no soportado | `{"detail": "Formato no soportado. Use CSV, XLSX o XML."}` |
+| `422` | Faltan columnas obligatorias | `{"detail": "Faltan columnas obligatorias: ['precio']"}` |
 
-### 6.4 Microservicio 2 – Reportes
+#### `GET /health`
+
+```bash
+curl http://localhost:8000/health
+```
+
+```json
+{ "estado": "ok", "servicio": "carga-limpieza" }
+```
+
+### 6.5 Microservicio 2 – Reportes
+
+Como son peticiones `GET`, también se pueden abrir directamente en el navegador.
 
 #### `GET /kpi/ventas`
+
+```bash
+curl http://localhost:8001/kpi/ventas
+```
 
 ```json
 { "ventas_totales": 548000.0, "numero_ventas": 4, "ticket_promedio": 137000.0 }
 ```
 
 #### `GET /kpi/ventas-por-tienda`
+
+```bash
+curl http://localhost:8001/kpi/ventas-por-tienda
+```
 
 ```json
 [
@@ -329,11 +354,15 @@ Errores:
 ]
 ```
 
-#### `GET /kpi/top-productos?limite=2`
+#### `GET /kpi/top-productos`
 
- Parámetro  Tipo  Obligatorio  Descripción 
- ---  ---  ---  --- 
- `limite`  entero de 1 a 50  No (por defecto 5)  Número de productos a devolver 
+| Parámetro | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `limite` | entero de 1 a 50 | No (por defecto 5) | Número de productos a devolver |
+
+```bash
+curl "http://localhost:8001/kpi/top-productos?limite=2"
+```
 
 ```json
 [
@@ -342,7 +371,16 @@ Errores:
 ]
 ```
 
-#### `GET /kpi/ventas-por-dia?desde=2026-10-02&hasta=2026-10-03`
+#### `GET /kpi/ventas-por-dia`
+
+| Parámetro | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `desde` | fecha ISO | No | Fecha inicial incluida |
+| `hasta` | fecha ISO | No | Fecha final incluida |
+
+```bash
+curl "http://localhost:8001/kpi/ventas-por-dia?desde=2026-10-02&hasta=2026-10-03"
+```
 
 ```json
 [
@@ -351,19 +389,27 @@ Errores:
 ]
 ```
 
-#### `GET /health` (ambos servicios)
+#### `GET /health`
+
+```bash
+curl http://localhost:8001/health
+```
 
 ```json
 { "estado": "ok", "servicio": "reportes" }
 ```
 
----
+### 6.6 Consumo desde Power BI en local
 
+Power BI Desktop puede leer los indicadores del Microservicio 2 mientras este se ejecuta en el mismo computador: Obtener datos → Web y se escribe, por ejemplo, `http://localhost:8001/kpi/ventas-por-tienda`.
+
+----------------------------------------------------------
 ## 7. Entorno de ingeniería de software en GitHub
+----------------------------------------------------------
 
 ### 7.1 Repositorio y `.gitignore`
 
-Repositorio individual con un [`.gitignore`](.gitignore) adaptado al stack: Python (entornos virtuales, caché, pruebas), secretos (`.env`, claves), Azure, Docker, Power BI y archivos del sistema operativo.
+Repositorio individual con un `.gitignore`.gitignore adaptado al stack: Python (entornos virtuales, caché, pruebas), secretos (`.env`, claves), Azure, Docker, Power BI y archivos del sistema operativo.
 
 ### 7.2 Estrategia de ramas
 
@@ -372,60 +418,56 @@ Repositorio individual con un [`.gitignore`](.gitignore) adaptado al stack: Pyth
 
 ### 7.3 Commits semánticos
 
- Tipo  Uso  Ejemplo 
- ---  ---  --- 
- `feat:`  Nueva funcionalidad  `feat(carga): agrega endpoint POST /upload` 
- `fix:`  Corrección de un error  `fix(carga): acepta fechas dd/mm/aaaa` 
- `docs:`  Documentación  `docs: agrega mapeo de actores NIST SP 500-292` 
- `refactor:`  Mejora interna sin cambiar el comportamiento  `refactor(reportes): separa el cálculo de KPI` 
+| Tipo | Uso | Ejemplo |
+| --- | --- | --- |
+| `feat:` | Nueva funcionalidad | `feat(carga): agrega endpoint POST /upload` |
+| `fix:` | Corrección de un error | `fix(carga): acepta fechas dd/mm/aaaa` |
+| `docs:` | Documentación | `docs: agrega mapeo de actores NIST SP 500-292` |
+| `refactor:` | Mejora interna sin cambiar el comportamiento | `refactor(reportes): separa el cálculo de KPI` |
 
 El workflow `pr-title.yml` valida que el título de cada Pull Request siga esta convención. El detalle está en [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### 7.4 Tablero y backlog
 
-- GitHub Projects: tablero agrupado por Milestone con el backlog inicial.
-- Milestones: Hito 1 – Diseño y gestión · Hito 2 – Persistencia e infraestructura · Hito 3 – Microservicios en la nube · Hito 4 – Visualización y cierre.
-- Historias de usuario: 13 Issues con la etiqueta `user-story`, formato «Como [rol], quiero [acción], para [beneficio]», criterios de aceptación y checklist de tareas técnicas. Su contenido está en [`scripts/backlog/`](scripts/backlog) y se publica con [`scripts/setup_github.sh`](scripts/setup_github.sh).
+### 7.4 Plantillas
 
-### 7.5 Plantillas
+| Archivo | Uso |
+| --- | --- |
+| [`.github/ISSUE_TEMPLATE/user_story.md`](.github/ISSUE_TEMPLATE/user_story.md) | Crear historias de usuario estandarizadas |
+| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Formalizar entregas y revisiones de código |
 
- Archivo  Uso 
- ---  --- 
- [`.github/ISSUE_TEMPLATE/user_story.md`](.github/ISSUE_TEMPLATE/user_story.md)  Crear historias de usuario estandarizadas 
- [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)  Formalizar entregas y revisiones de código 
-
-### 7.6 Integración continua
+### 7.5 Integración continua
 
 Cada microservicio tiene su propio workflow (`ci-carga-limpieza.yml` y `ci-reportes.yml`) que ejecuta las pruebas y construye la imagen Docker solo cuando cambia su carpeta.
 
----
-
 ## 8. Estructura del repositorio
 
-![Estructura del repositorio](<Doc/Estructura del repositorio.png>)
-
-## 9. Ejecución local
-
-Requisito: Python 3.12.
-
-```bash
-cd services/carga-limpieza
-python -m venv .venv
-source .venv/bin/activate        # en Windows: .venv\Scripts\activate
-pip install -r requirements.txt pytest
-pytest
-uvicorn app.main:app --reload --port 8000
 ```
-
-Luego se abre `http://localhost:8000/docs` y se prueba `POST /upload` con `data-samples/ventas.csv`. El Microservicio 2 se ejecuta igual desde `services/reportes`, en el puerto 8001.
-
----
-
-## 10. Conclusiones
-
-- La problemática justifica una solución en la nube con pago por uso y escalado automático.
-- La arquitectura con dos microservicios en Python separa la carga y limpieza de datos de la generación de reportes; cada uno se desarrolla, despliega y escala de forma independiente.
-- El diseño cumple las cinco características esenciales del NIST SP 800-145, lo que lo valida formalmente como un sistema de computación en la nube.
-- El mapeo de actores del NIST SP 500-292 muestra que la empresa traslada la inversión y el mantenimiento de infraestructura al proveedor y paga solo por lo que usa.
-- GitHub organiza el trabajo con ramas protegidas, commits semánticos, historias de usuario y un tablero por hitos durante todo el curso.
-
+azuredata/
+├── README.md
+├── CONTRIBUTING.md                 # ramas y commits semánticos
+├── .gitignore
+├── .github/
+│   ├── ISSUE_TEMPLATE/user_story.md
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/                  # ci-carga-limpieza, ci-reportes, pr-title
+├── docs/arquitectura.png
+├── data-samples/                  # archivos de prueba con errores típicos
+│   ├── ventas.csv
+│   ├── ventas_tienda_sur.xlsx
+│   └── ventas_tienda_online.xml
+├── services/
+│   ├── carga-limpieza/             # Microservicio 1: Python + pandas + FastAPI
+│   │   ├── app/  (main.py, limpieza.py)
+│   │   ├── tests/
+│   │   ├── requirements.txt
+│   │   └── Dockerfile
+│   └── reportes/                   # Microservicio 2: Python + FastAPI
+│       ├── app/  (main.py, kpi.py)
+│       ├── tests/
+│       ├── requirements.txt
+│       └── Dockerfile
+├── powerbi/                        # reporte .pbix
+└── scripts/
+    ├── setup_github.sh             # crea etiquetas, milestones, issues y tablero
+    └── backlog/                    # historias de usuario
+```
