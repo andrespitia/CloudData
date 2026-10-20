@@ -175,45 +175,19 @@ La arquitectura de referencia NIST SP 500-292 define cinco actores que participa
 | Power BI Desktop y GitHub | Gratuitos para este uso | 0 USD |
 
 El proyecto se ejecutara dentro del crédito de Azure for Students (100 USD), con un presupuesto de 20 USD y alerta al 80 % en Cost Management.
-
+--------------------------------------------------------------------
 ## 5. Diagrama de arquitectura
+--------------------------------------------------------------------
 
 El sistema tiene dos microservicios en Python con responsabilidades separadas. No se llaman entre sí: se comunican a través de la capa de persistencia (Blob Storage y Azure SQL).
 
 ### 5.1 Componentes y protocolos
 
-```mermaid
-flowchart LR
-    subgraph FUENTES["Fuentes de datos"]
-        ARCH["Archivos de tiendas<br/>CSV · XLSX · XML"]
-        ORIG[("Azure SQL<br/>ventas")]
-    end
-
-    subgraph AZURE["Microsoft Azure · rg-CloudData-dev"]
-        subgraph CAPPS["Azure Container Apps"]
-            MS1["Microservicio 1<br/>Carga y limpieza<br/>Python + pandas + FastAPI"]
-            MS2["Microservicio 2<br/>Reportes KPI<br/>Python + FastAPI"]
-        end
-        subgraph PERS["Capa de persistencia"]
-            BLOB[("Azure Blob Storage<br/>raw/ · processed/")]
-            SQL[("Azure SQL Database<br/>datos consolidados")]
-        end
-    end
-
-    PBI["Power BI<br/>tablero gerencial"]
-
-    ARCH -->"HTTPS POST /upload · multipart/form-data" MS1
-    ORIG -->"TDS/SQL · puerto 1433" MS1
-    MS1 -->"HTTPS · Blob REST API" BLOB
-    MS1 -->"TDS/SQL · puerto 1433 · escritura" SQL
-    SQL -->"TDS/SQL · puerto 1433 · lectura" MS2
-    MS2 -->"HTTPS · REST · JSON" PBI
-    SQL -.->"DirectQuery · TDS/SQL" PBI
-```
+![Estructura del repositorio](<Doc/AC.png>)
 
 ### 5.2 Vista general
 
-
+![Arquitectura](Doc/Arquitectura.png)
 
 ### 5.3 Flujo de datos
 
@@ -225,32 +199,50 @@ flowchart LR
 
 ### 5.4 Los dos microservicios
 
-  Microservicio 1: Carga y limpieza  Microservicio 2: Reportes (KPI) 
- ---  ---  --- 
- Responsabilidad  Recibir archivos, validar, normalizar y eliminar duplicados  Calcular indicadores de ventas e inventario 
- Tecnología  Python + FastAPI + pandas  Python + FastAPI 
- Entrada  Archivos CSV, Excel o XML; base Azure SQL de ventas  Tablas consolidadas en Azure SQL 
- Salida  `raw/` y `processed/` en Blob Storage; tablas en Azure SQL  API REST para reportes 
- Endpoints  `POST /upload`, `GET /health`  `GET /kpi/ventas`, `GET /kpi/top-productos`, `GET /health` 
- Despliegue  Container App propia, de 0 a 3 réplicas  Container App propia, de 0 a 3 réplicas 
+ **Microservicio 1: Carga y limpieza**
+
+ Recibir archivos, validar, normalizar y eliminar duplicados 
+ Python + FastAPI + pandas 
+ Archivos CSV, Excel o XML; base Azure SQL de ventas 
+ `raw/` y `processed/` en Blob Storage; tablas en Azure SQL 
+ `POST /upload`, `GET /health` 
+ Container App propia, de 0 a 3 réplicas 
+
+ **Microservicio 2: Reportes (KPI)**
+ Calcular indicadores de ventas e inventario
+ Python + FastAPI
+ Tablas consolidadas en Azure SQL 
+ API REST para reportes
+ `GET /kpi/ventas`, `GET /kpi/top-productos`, `GET /health`
+ Container App propia, de 0 a 3 réplicas
+ 
 
 ### 5.5 Capa de persistencia
 
- Componente  Qué guarda  Para qué 
- ---  ---  --- 
- Azure Blob Storage  `raw/`: archivo original tal como llegó. `processed/`: archivo depurado  Trazabilidad: cualquier dato del reporte se puede rastrear hasta su archivo de origen 
- Azure SQL Database  Ventas e inventario consolidados  Consultas rápidas y consistentes del Microservicio 2 y de Power BI 
+**Componente** 
+
+ 5.5.1 Azure Blob Storage 
+ 5.5.2 Azure SQL Database 
+ 
+ **Qué guarda** 
+ 5.5.1 `raw/`: archivo original tal como llegó. `processed/`: archivo depurado
+ 5.5.2 Ventas e inventario consolidados
+ 
+ **Para qué** 
+ 5.5.1 Consultas rápidas y consistentes del Microservicio 2 y de Power BI 
+ 5.5.2 Trazabilidad: cualquier dato del reporte se puede rastrear hasta su archivo de origen
+
 
 ### 5.6 Protocolos de comunicación
 
- Origen → Destino  Protocolo  Formato 
- ---  ---  --- 
- Usuario → Microservicio 1  HTTPS (TLS)  `multipart/form-data` → respuesta JSON 
- Microservicio 1 → Blob Storage  HTTPS, API REST de Blob mediante el SDK de Azure  Archivo 
- Microservicio 1 → Azure SQL  TDS (protocolo de SQL Server), cifrado, puerto 1433  Filas SQL 
- Microservicio 2 → Azure SQL  TDS cifrado, puerto 1433, solo lectura  Consultas SQL 
- Power BI → Microservicio 2  HTTPS (TLS)  JSON 
- Power BI → Azure SQL  TDS (DirectQuery), solo lectura  Consultas SQL 
+| Origen → Destino | Protocolo | Formato |
+
+| Usuario → Microservicio 1 | HTTPS (TLS) | `multipart/form-data` → respuesta JSON |
+| Microservicio 1 → Blob Storage | HTTPS, API REST de Blob mediante el SDK de Azure | Archivo |
+| Microservicio 1 → Azure SQL | TDS (protocolo de SQL Server), cifrado, puerto 1433 | Filas SQL |
+| Microservicio 2 → Azure SQL | TDS cifrado, puerto 1433, solo lectura | Consultas SQL |
+| Power BI → Microservicio 2 | HTTPS (TLS) | JSON |
+| Power BI → Azure SQL | TDS (DirectQuery), solo lectura | Consultas SQL |
 
 ### 5.7 Por qué la arquitectura es desacoplada
 
@@ -258,11 +250,10 @@ flowchart LR
 - Despliegue independiente: cada uno tiene su propio código, imagen Docker, workflow de GitHub Actions y Container App.
 - Escalado independiente: el de carga crece en los cierres de mes y el de reportes cuando la gerencia consulta.
 - Tolerancia a fallos: si el Microservicio 1 falla, los reportes siguen disponibles con los datos ya consolidados.
-
----
-
+  
+--------------------------------------------------------------------
 ## 6. Especificación de la API REST
-
+--------------------------------------------------------------------
 ### 6.1 Convenciones
 
 - URL base: cada microservicio tiene su propia dirección en Azure Container Apps, por ejemplo `https://carga-limpieza.<entorno>.azurecontainerapps.io` y `https://reportes.<entorno>.azurecontainerapps.io`.
@@ -411,35 +402,7 @@ Cada microservicio tiene su propio workflow (`ci-carga-limpieza.yml` y `ci-repor
 
 ## 8. Estructura del repositorio
 
-```
-CloudData/
-├── README.md
-├── CONTRIBUTING.md                 # ramas y commits semánticos
-├── .gitignore
-├── .github/
-│   ├── ISSUE_TEMPLATE/user_story.md
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/                  # ci-carga-limpieza, ci-reportes, pr-title
-├── docs/arquitectura.png
-├── data-samples/ventas.csv         # archivo de prueba con errores típicos
-├── services/
-│   ├── carga-limpieza/             # Microservicio 1: Python + pandas + FastAPI
-│   │   ├── app/  (main.py, limpieza.py)
-│   │   ├── tests/
-│   │   ├── requirements.txt
-│   │   └── Dockerfile
-│   └── reportes/                   # Microservicio 2: Python + FastAPI
-│       ├── app/  (main.py, kpi.py)
-│       ├── tests/
-│       ├── requirements.txt
-│       └── Dockerfile
-├── powerbi/                        # reporte .pbix
-└── scripts/
-    ├── setup_github.sh             # crea etiquetas, milestones, issues y tablero
-    └── backlog/                    # historias de usuario
-```
-
----
+![Estructura del repositorio](<Doc/Estructura del repositorio.png>)
 
 ## 9. Ejecución local
 
