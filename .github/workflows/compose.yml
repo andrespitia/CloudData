@@ -1,0 +1,57 @@
+name: compose
+
+# Verifica que el proyecto se despliega completo con Docker Compose,
+# igual que lo hará la docente: levanta los dos microservicios,
+# sube un archivo y comprueba que los reportes lo reflejan.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  despliegue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar servicios
+        run: docker compose up -d --build
+
+      - name: Esperar a que respondan
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health && curl -sf http://localhost:8001/health; then
+              echo; echo "Servicios listos"; exit 0
+            fi
+            sleep 3
+          done
+          docker compose logs
+          exit 1
+
+      - name: Probar el flujo completo
+        run: |
+          set -e
+          echo "Indicadores con la carga inicial:"
+          curl -sf http://localhost:8001/kpi/ventas | tee inicial.json; echo
+          python3 -c "import json; d=json.load(open('inicial.json')); assert d['numero_ventas'] > 0, d"
+
+          echo "Carga de un archivo nuevo:"
+          printf 'id_venta,fecha,tienda,producto,cantidad,precio\nCI-001,2026-10-07,Centro,Monitor 24,1,650000\n' > ci.csv
+          curl -sf -X POST http://localhost:8000/upload -F "archivo=@ci.csv" | tee carga.json; echo
+          python3 -c "import json; d=json.load(open('carga.json')); assert d['cargadas'] == 1, d"
+
+          echo "Indicadores después de la carga:"
+          curl -sf http://localhost:8001/kpi/ventas | tee final.json; echo
+          python3 -c "import json; a=json.load(open('inicial.json')); b=json.load(open('final.json')); assert b['numero_ventas'] == a['numero_ventas'] + 1, (a, b)"
+
+          echo "Informe de calidad de la carga:"
+          ID=$(python3 -c "import json; print(json.load(open('carga.json'))['id_carga'])")
+          curl -sf "http://localhost:8000/cargas/$ID"; echo
+
+      - name: Registros de los contenedores
+        if: always()
+        run: docker compose logs
+
+      - name: Apagar
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,51 @@
+# CloudData - despliegue local reproducible
+#
+# Uso:
+#   docker compose up --build
+#
+# Microservicio 1 (carga y limpieza): http://localhost:8000/docs
+# Microservicio 2 (reportes / KPI):   http://localhost:8001/docs
+#
+# Los dos servicios comparten el volumen "datos" (capa de persistencia):
+#   /data/raw/          archivos originales
+#   /data/processed/    archivos depurados
+#   /data/clouddata.db  ventas consolidadas e historial de cargas (SQLite)
+#
+# Al iniciar por primera vez, el Microservicio 1 carga los archivos de
+# data-samples/ para que los reportes muestren datos desde el comienzo.
+# Para empezar desde cero:  docker compose down -v
+
+services:
+  carga-limpieza:
+    build: ./services/carga-limpieza
+    ports:
+      - "8000:8000"
+    environment:
+      DATA_DIR: /data
+      CARGA_INICIAL_DIR: /samples
+    volumes:
+      - datos:/data
+      - ./data-samples:/samples:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  reportes:
+    build: ./services/reportes
+    ports:
+      - "8001:8000"
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - datos:/data
+    depends_on:
+      carga-limpieza:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  datos:

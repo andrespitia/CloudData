@@ -54,6 +54,8 @@ azureauth.json
 docker-compose.override.yml
 
 # ---------- Datos generados ----------
+# Base de datos y archivos que crean los microservicios al ejecutarse.
+data/
 # Los archivos de ejemplo en data-samples/ SÍ se versionan.
 # Las salidas de procesamiento local no.
 salida/

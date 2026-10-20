@@ -32,7 +32,7 @@ Luego se abre un Pull Request hacia `main` usando la plantilla, se enlaza la his
 En **Settings → Branches → Add branch ruleset** (o *Add rule*) sobre `main`:
 
 - Require a pull request before merging
-- Require status checks to pass (`ci-carga-limpieza`, `ci-reportes`, `pr-title`)
+- Require status checks to pass (`ci-carga-limpieza`, `ci-reportes`, `compose`, `pr-title`)
 - Block force pushes
 
 ## Commits semánticos

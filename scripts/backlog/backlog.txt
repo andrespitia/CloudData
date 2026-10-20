@@ -1,13 +1,14 @@
 HU-01|[HU-01] Documentar arquitectura y justificación NIST|Hito 1 – Diseño y gestión|user-story,docs
 HU-02|[HU-02] Configurar el ecosistema de gestión en GitHub|Hito 1 – Diseño y gestión|user-story,infra
-HU-03|[HU-03] Aprovisionar la infraestructura base en Azure|Hito 2 – Persistencia e infraestructura|user-story,infra
+HU-14|[HU-14] Despliegue reproducible con Docker Compose|Hito 1 – Diseño y gestión|user-story,infra
+HU-03|[HU-03] Infraestructura reproducible con contenedores|Hito 2 – Persistencia e infraestructura|user-story,infra
 HU-04|[HU-04] Conservar el archivo original y el depurado|Hito 2 – Persistencia e infraestructura|user-story,ms-carga
-HU-05|[HU-05] Modelo de datos de ventas consolidadas|Hito 2 – Persistencia e infraestructura|user-story,ms-carga,infra
+HU-05|[HU-05] Base de datos compartida de ventas consolidadas|Hito 2 – Persistencia e infraestructura|user-story,ms-carga,ms-reportes
 HU-06|[HU-06] Subir el archivo de ventas del día|Hito 3 – Microservicios en la nube|user-story,ms-carga
 HU-07|[HU-07] Consultar el informe de calidad de una carga|Hito 3 – Microservicios en la nube|user-story,ms-carga
 HU-08|[HU-08] Resumen de ventas y comparación entre tiendas|Hito 3 – Microservicios en la nube|user-story,ms-reportes
 HU-09|[HU-09] Productos más vendidos y tendencia diaria|Hito 3 – Microservicios en la nube|user-story,ms-reportes
 HU-13|[HU-13] Alerta de productos con inventario bajo|Hito 3 – Microservicios en la nube|user-story,ms-reportes
-HU-10|[HU-10] Desplegar los microservicios en Azure Container Apps|Hito 3 – Microservicios en la nube|user-story,infra,ms-carga,ms-reportes
+HU-10|[HU-10] Imágenes Docker por microservicio y despliegue opcional en Azure|Hito 3 – Microservicios en la nube|user-story,infra,ms-carga,ms-reportes
 HU-11|[HU-11] Tablero gerencial en Power BI|Hito 4 – Visualización y cierre|user-story,power-bi
-HU-12|[HU-12] Control de costos de la plataforma|Hito 4 – Visualización y cierre|user-story,infra
+HU-12|[HU-12] Control de costos en Azure (opcional)|Hito 4 – Visualización y cierre|user-story,infra

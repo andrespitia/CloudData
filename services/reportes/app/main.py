@@ -1,25 +1,11 @@
-"""Microservicio 2 - Reportes / KPI (esqueleto del hito 1).
+"""Microservicio 2 - Reportes / KPI."""
 
-En este hito los datos se leen de un CSV de ventas consolidadas
-(variable VENTAS_FUENTE). En hitos posteriores se reemplaza por
-una consulta a Azure SQL Database, sin cambiar los endpoints.
-"""
-
-import os
-
-import pandas as pd
 from fastapi import FastAPI, Query
 
 from app import kpi
+from app.datos import obtener_ventas
 
-app = FastAPI(title="CloudData - Reportes", version="0.1.0")
-
-FUENTE = os.getenv("VENTAS_FUENTE", "datos/ventas_consolidadas.csv")
-
-
-def obtener_ventas() -> pd.DataFrame:
-    # TODO (hito 2): leer desde Azure SQL Database.
-    return pd.read_csv(FUENTE)
+app = FastAPI(title="CloudData - Reportes", version="1.0.0")
 
 
 @app.get("/health")
@@ -28,7 +14,7 @@ def health():
 
 
 @app.get("/kpi/ventas")
-def kpi_resumen():
+def kpi_ventas():
     return kpi.resumen(obtener_ventas())
 
 

@@ -1,22 +1,24 @@
-"""Microservicio 1 - Carga y limpieza (esqueleto del hito 1).
+"""Microservicio 1 - Carga y limpieza."""
 
-La persistencia en Blob Storage y Azure SQL se implementa en hitos posteriores.
-"""
+import os
+from contextlib import asynccontextmanager
 
-import io
-
-import pandas as pd
 from fastapi import FastAPI, HTTPException, UploadFile
 
-from app.limpieza import limpiar
+from app import almacenamiento
+from app.procesamiento import FormatoNoSoportado, carga_inicial, procesar_archivo
 
-app = FastAPI(title="CloudData - Carga y limpieza", version="0.1.0")
 
-LECTORES = {
-    ".csv": pd.read_csv,
-    ".xlsx": pd.read_excel,
-    ".xml": pd.read_xml,
-}
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    almacenamiento.inicializar()
+    # Si CARGA_INICIAL_DIR apunta a una carpeta con ejemplos y la base está vacía,
+    # se cargan automáticamente para que los reportes tengan datos desde el inicio.
+    carga_inicial(os.getenv("CARGA_INICIAL_DIR"))
+    yield
+
+
+app = FastAPI(title="CloudData - Carga y limpieza", version="1.0.0", lifespan=ciclo_de_vida)
 
 
 @app.get("/health")
@@ -25,18 +27,19 @@ def health():
 
 
 @app.post("/upload", status_code=201)
-async def crear_carga(archivo: UploadFile):
-    nombre = (archivo.filename or "").lower()
-    extension = nombre[nombre.rfind("."):] if "." in nombre else ""
-    if extension not in LECTORES:
-        raise HTTPException(status_code=415, detail="Formato no soportado. Use CSV, XLSX o XML.")
-
+async def upload(archivo: UploadFile):
     contenido = await archivo.read()
     try:
-        datos = LECTORES[extension](io.BytesIO(contenido))
-        _, resumen = limpiar(datos)
+        return procesar_archivo(archivo.filename or "archivo", contenido)
+    except FormatoNoSoportado as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    # TODO (hito 2): guardar original en raw/, limpio en processed/ y cargar en Azure SQL.
-    return {"archivo": archivo.filename, "estado": "procesado", **resumen}
+
+@app.get("/cargas/{id_carga}")
+def obtener_carga(id_carga: str):
+    resumen = almacenamiento.obtener_carga(id_carga)
+    if resumen is None:
+        raise HTTPException(status_code=404, detail="La carga no existe.")
+    return resumen

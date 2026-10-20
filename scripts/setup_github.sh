@@ -16,12 +16,14 @@
 # Uso:
 #   bash scripts/setup_github.sh            # crea todo
 #   DRY_RUN=1 bash scripts/setup_github.sh  # solo muestra lo que haría
+#   ACTUALIZAR=1 bash scripts/setup_github.sh  # además actualiza las historias que ya existen
 #
 # Es seguro ejecutarlo más de una vez: omite lo que ya existe.
 # ==========================================================
 set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-0}"
+ACTUALIZAR="${ACTUALIZAR:-0}"   # 1 = reescribe título, texto y milestone de las historias existentes
 BACKLOG_DIR="scripts/backlog"
 PROJECT_TITLE="${PROJECT_TITLE:-CloudData - Backlog}"
 
@@ -73,29 +75,35 @@ crear_milestone "Hito 4 – Visualización y cierre"         "Power BI, pruebas 
 
 # ---------- 3. Historias de usuario ----------
 echo "==> Historias de usuario"
+# Lista de issues que ya existen ("titulo|url"), consultada una sola vez.
+EXISTENTES=""
+if [ "$DRY_RUN" != "1" ]; then
+  EXISTENTES="$(gh issue list --repo "$REPO" --state all --limit 500 \
+                 --json title,url -q '.[] | "\(.title)|\(.url)"' < /dev/null)"
+fi
 URLS=()
-while IFS='|' read -r id titulo milestone etiquetas; do
+# El archivo se lee por el descriptor 3 para que los comandos gh
+# del bucle no consuman la lista de historias.
+while IFS='|' read -r id titulo milestone etiquetas <&3; do
   [ -z "$id" ] && continue
-  url=""
-  if [ "$DRY_RUN" != "1" ]; then
-    url="$(gh issue list --repo "$REPO" --state all --search "$id in:title" \
-            --json url -q '.[0].url // empty')"
-  fi
-  if [ -n "$url" ]; then
+  url="$(printf '%s\n' "$EXISTENTES" | grep -F "[$id]" | head -n1 | cut -d'|' -f2- || true)"
+  if [ -n "$url" ] && [ "$ACTUALIZAR" = "1" ]; then
+    run gh issue edit "$url" --repo "$REPO" --title "$titulo" \
+      --body-file "$BACKLOG_DIR/$id.md" --milestone "$milestone" --add-label "$etiquetas" < /dev/null >/dev/null
+    echo "   actualizada: $titulo"
+  elif [ -n "$url" ]; then
     echo "   ya existe: $titulo"
+  elif [ "$DRY_RUN" = "1" ]; then
+    run gh issue create --repo "$REPO" --title "$titulo" \
+      --body-file "$BACKLOG_DIR/$id.md" --label "$etiquetas" --milestone "$milestone"
+    url="https://github.com/$REPO/issues/$id"
   else
-    if [ "$DRY_RUN" = "1" ]; then
-      run gh issue create --repo "$REPO" --title "$titulo" \
-        --body-file "$BACKLOG_DIR/$id.md" --label "$etiquetas" --milestone "$milestone"
-      url="https://github.com/$REPO/issues/$id"
-    else
-      url="$(gh issue create --repo "$REPO" --title "$titulo" \
-        --body-file "$BACKLOG_DIR/$id.md" --label "$etiquetas" --milestone "$milestone")"
-      echo "   creada: $url"
-    fi
+    url="$(gh issue create --repo "$REPO" --title "$titulo" \
+      --body-file "$BACKLOG_DIR/$id.md" --label "$etiquetas" --milestone "$milestone" < /dev/null)"
+    echo "   creada: $url"
   fi
   URLS+=("$url")
-done < "$BACKLOG_DIR/backlog.txt"
+done 3< "$BACKLOG_DIR/backlog.txt"
 
 # ---------- 4. Tablero de GitHub Projects ----------
 echo "==> Tablero de GitHub Projects"
@@ -115,10 +123,11 @@ if [ -z "$numero" ]; then
 else
   echo "   ya existe: proyecto #$numero"
 fi
-run gh project link "$numero" --owner "$OWNER" --repo "$REPO" || true
+run gh project link "$numero" --owner "$OWNER" --repo "$REPO" < /dev/null || true
 
 for url in "${URLS[@]}"; do
-  run gh project item-add "$numero" --owner "$OWNER" --url "$url" || true
+  run gh project item-add "$numero" --owner "$OWNER" --url "$url" < /dev/null || true
+  echo "   agregada al tablero: $url"
 done
 
 echo
