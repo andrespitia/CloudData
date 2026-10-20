@@ -1,9 +1,4 @@
-"""Cálculo de indicadores (KPI) de ventas.
 
-Lógica de dominio del Microservicio 2. Recibe ventas ya consolidadas
-(las que el Microservicio 1 deja en la capa de persistencia) y calcula
-los indicadores que consume Power BI.
-"""
 
 import pandas as pd
 

@@ -1,8 +1,3 @@
-"""Lectura de la capa de persistencia para el Microservicio 2 (solo lectura).
-
-Lee las ventas consolidadas que escribe el Microservicio 1 en
-<DATA_DIR>/clouddata.db. En la nube se reemplaza por Azure SQL.
-"""
 
 import os
 import sqlite3
@@ -14,7 +9,7 @@ COLUMNAS = ["id_venta", "fecha", "tienda", "producto", "cantidad", "precio", "to
 
 
 def _directorio_por_defecto() -> Path:
-    """Carpeta data/ en la raíz del repositorio al ejecutar sin Docker."""
+    
     padres = Path(__file__).resolve().parents
     return padres[3] / "data" if len(padres) > 3 else Path("/data")
 
@@ -24,7 +19,7 @@ def ruta_db() -> Path:
 
 
 def obtener_ventas() -> pd.DataFrame:
-    """Devuelve las ventas consolidadas; vacío si aún no hay cargas."""
+   
     ruta = ruta_db()
     if not ruta.exists():
         return pd.DataFrame(columns=COLUMNAS)
