@@ -2,15 +2,15 @@
 # CloudData
 #####################
 
-**Plataforma que permite a una empresa centralizar información procedente de distintas fuentes, procesarla automáticamente, almacenarla y consultar indicadores de negocio desde Power BI.**
+Plataforma que permite a una empresa centralizar información procedente de distintas fuentes, procesarla automáticamente, almacenarla y consultar indicadores de negocio desde Power BI.
 
 CloudData integra datos de varias fuentes en Microsoft Azure, los procesa con dos micro servicios, los guarda en una capa de persistencia y los publica en Power BI. Este repositorio contiene la primera fase del proyecto: diseño de la arquitectura, justificación teórica según el NIST y entorno de gestión en GitHub.
 
 --------------------------------------------------------------------
- **Autor**  Andres Leonardo Espitia Ramírez 
- **Asignatura**  Cloud Computing 
- **Fase actual**  Hito 1 – Diseño y gestión 
- **Nube**  Microsoft Azure (cuenta Azure for Students) 
+ Autor  Andres Leonardo Espitia Ramírez 
+ Asignatura  Cloud Computing 
+ Fase actual  Hito 1 – Diseño y gestión 
+ Nube  Microsoft Azure (cuenta Azure for Students) 
 --------------------------------------------------------------------
 ## Contenido
 
@@ -29,20 +29,20 @@ CloudData integra datos de varias fuentes en Microsoft Azure, los procesa con do
 --------------------------------------------------------------------
 ## 1. Bases del proyecto
 --------------------------------------------------------------------
-**Nombre:** CloudData – Plataforma de integración y análisis de datos en Azure.
+Nombre: CloudData – Plataforma de integración y análisis de datos en Azure.
 
-**Objetivo general:** diseñar una plataforma en la nube de Microsoft Azure que integre datos de varias fuentes, los procese mediante dos microservicios desacoplados y los presente en Power BI para apoyar decisiones de ventas e inventario.
+Objetivo general: diseñar una plataforma en la nube de Microsoft Azure que integre datos de varias fuentes, los procese mediante dos microservicios desacoplados y los presente en Power BI para apoyar decisiones de ventas e inventario.
 
-**Objetivos específicos:**
+Objetivos específicos:
 
 1. Definir una problemática de negocio real que justifique la adopción de la nube.
 2. Diseñar una arquitectura desacoplada con dos microservicios y una capa de persistencia.
 3. Configurar el entorno de gestión de ingeniería de software en GitHub.
 4. Fundamentar el sistema según la definición de computación en la nube del NIST SP 800-145 y la arquitectura de referencia del NIST SP 500-292.
 
-**Alcance:** el proyecto soluciona una problemática de carga y consolidación de datos mediante servicios en la nube y dos microservicios que procesan los datos para que luego los resultados se consulten como indicadores de negocio. Se prioriza una solución funcional, económica y fácil de mantener.
+Alcance: el proyecto soluciona una problemática de carga y consolidación de datos mediante servicios en la nube y dos microservicios que procesan los datos para que luego los resultados se consulten como indicadores de negocio. Se prioriza una solución funcional, económica y fácil de mantener.
 
-**Tecnologías:**
+Tecnologías:
 
  Capa  Tecnología 
 
@@ -61,51 +61,39 @@ CloudData integra datos de varias fuentes en Microsoft Azure, los procesa con do
 --------------------------------------------------------------------
 ### 2.1 Problemática de negocio
 
-La empresa es una **cadena de tiendas de tecnología** que tarda entre 2 y 3 días en obtener un reporte consolidado de ventas e inventario, lo que retrasa la reposición de productos.
+La empresa es una cadena de tiendas de tecnología que tarda entre 2 y 3 días en obtener un reporte consolidado de ventas e inventario, lo que retrasa la reposición de productos.
 
-**Situación actual:**
+Situación actual:
 
-- Las ventas se registran en un ERP sobre **Oracle** y el inventario en **SQL Server on-premises**.
-- Los proveedores envían catálogos y despachos en **CSV y Excel** por correo.
-- La tienda online entrega los pedidos mediante una **API REST**.
+- Las ventas se registran en un ERP sobre Oracle y el inventario en SQL Server on-premises.
+- Los proveedores envían catálogos y despachos en CSV y Excel por correo.
+- La tienda online entrega los pedidos mediante una API REST.
 - Los reportes se consolidan a mano en Excel cada semana, con registros duplicados y errores de digitación.
 - El servidor local se satura en los cierres de mes.
 
-**Consecuencias:** decisiones tomadas con datos desactualizados, quiebres de stock en productos de alta rotación y horas de trabajo manual en tareas repetitivas.
+Consecuencias: decisiones tomadas con datos desactualizados, quiebres de stock en productos de alta rotación y horas de trabajo manual en tareas repetitivas.
 
 ### 2.2 Solución: una aplicación nativa de la nube
 
 CloudData reemplaza el proceso manual por un flujo automático:
 
-1. Cada tienda o área **sube su archivo** de ventas al Microservicio 1.
-2. El **Microservicio 1 – Carga y limpieza** valida, normaliza y elimina duplicados, y guarda los datos en la capa de persistencia.
-3. El **Microservicio 2 – Reportes** calcula indicadores de ventas e inventario.
-4. **Power BI** muestra los indicadores a la gerencia desde la web o el celular.
+1. Cada tienda o área sube su archivo de ventas al Microservicio 1.
+2. El Microservicio 1 – Carga y limpieza valida, normaliza y elimina duplicados, y guarda los datos en la capa de persistencia.
+3. El Microservicio 2 – Reportes calcula indicadores de ventas e inventario.
+4. Power BI muestra los indicadores a la gerencia desde la web o el celular.
 
-En este proyecto, las fuentes de la empresa (Oracle, SQL Server, archivos de proveedores y la API de la tienda online) se **simulan** con archivos CSV, Excel y XML y una base Azure SQL de ventas.
+En este proyecto, las fuentes de la empresa (Oracle, SQL Server, archivos de proveedores y la API de la tienda online) se simulan con archivos CSV, Excel o XML y una base Azure SQL de ventas.
 
-**Indicadores de éxito esperados:** reporte disponible pocas horas después de cada carga, 0 registros duplicados en la capa consolidada y un tablero único de ventas e inventario.
+Indicadores de éxito esperados: reporte disponible pocas horas después de cada carga, 0 registros duplicados en la capa consolidada y un tablero único de ventas e inventario.
 
 ### 2.3 Por qué no es un sistema CRUD
 
-Un sistema CRUD solo crea, lee, actualiza y borra registros tal como llegan. CloudData **transforma** los datos con reglas de negocio y **genera indicadores** a partir de ellos:
-
- Regla de negocio  Microservicio  Ejemplo 
- ---  ---  --- 
- Toda venta debe tener identificador  Carga y limpieza  Se descarta una fila sin `id_venta` 
- La cantidad vendida debe ser positiva  Carga y limpieza  Se descarta una venta con cantidad `-2` 
- Fechas en un único formato  Carga y limpieza  `01/10/2026` → `2026-10-01` 
- Nombres de tienda homogéneos  Carga y limpieza  `"  norte "` → `Norte` 
- Una venta no se registra dos veces  Carga y limpieza  Se elimina el `V002` repetido 
- Cálculo del total por venta  Carga y limpieza  `cantidad × precio` 
- Indicadores agregados  Reportes  Ventas por tienda, productos más vendidos, inventario bajo 
-
-Cada carga devuelve además un **informe de calidad** con cuántas filas se descartaron y por qué.
+Un sistema CRUD solo crea, lee, actualiza y borra registros tal como llegan. CloudData transforma los datos con reglas de negocio y genera indicadores a partir de ellos.
 
 ### 2.4 Casos de uso principales
 
  ID  Caso de uso  Actor  Microservicio 
- ---  ---  ---  --- 
+ 
  CU-01  Subir el archivo de ventas  Encargado de tienda  Carga y limpieza 
  CU-02  Consultar el informe de calidad de una carga  Encargado de tienda  Carga y limpieza 
  CU-03  Consultar el resumen de ventas de la cadena  Gerente comercial  Reportes 
@@ -116,88 +104,81 @@ Cada carga devuelve además un **informe de calidad** con cuántas filas se desc
 
 ### 2.5 Justificación del uso de la nube
 
- Necesidad del negocio  Respuesta en Azure 
- ---  --- 
- Unificar archivos y bases de datos heterogéneos  El Microservicio 1 recibe CSV, Excel y XML y los lleva a un formato común en Azure SQL 
- Datos confiables  El Microservicio 1 valida, normaliza y elimina duplicados antes de consolidar 
- Capacidad variable (fines de mes)  Container Apps escala los microservicios según la demanda y baja a cero sin uso 
- Información disponible para la gerencia  El Microservicio 2 calcula indicadores y Power BI los muestra en tableros web y móviles 
+ Necesidad del negocio  
+  
+ Unificar archivos y bases de datos heterogéneos  El Microservicio 1 recibe CSV, Excel o XML y los lleva a un formato común en Azure SQL 
+ Datos confiables  
+ El Microservicio 1 valida, normaliza y elimina duplicados antes de consolidar. Información disponible para la gerencia  
+ El Microservicio 2 calcula indicadores y Power BI los muestra en tableros web 
  Crecer sin rehacer el sistema  La arquitectura por microservicios permite sumar fuentes y servicios 
-
----
-
+ 
+--------------------------------------------------------------------
 ## 3. Justificación NIST SP 800-145
+--------------------------------------------------------------------
 
-El NIST SP 800-145 define la computación en la nube como un modelo que permite acceso ubicuo, conveniente y bajo demanda, a través de la red, a un conjunto compartido de recursos configurables que se aprovisionan y liberan rápidamente con un mínimo esfuerzo de gestión. La definición se compone de **5 características esenciales**, **3 modelos de servicio** y **4 modelos de despliegue**.
+El NIST SP 800-145 define la computación en la nube como un modelo que permite acceso ubicuo, conveniente y bajo demanda, a través de la red, a un conjunto compartido de recursos configurables que se aprovisionan y liberan rápidamente con un mínimo esfuerzo de gestión. La definición se compone de 5 características esenciales, 3 modelos de servicio y 4 modelos de despliegue.
 
 CloudData cumple las cinco características esenciales, usa los modelos PaaS y SaaS y se despliega en nube pública.
 
 ### 3.1 Las 5 características esenciales
 
- Característica  Cómo la aprovecha CloudData  Problema de negocio que resuelve 
- ---  ---  --- 
- **Autoservicio bajo demanda**  El equipo crea Blob Storage, Azure SQL y Container Apps desde el portal o Azure CLI, sin intervención del proveedor, y los elimina cuando ya no se necesitan.  Evita esperar semanas por la compra e instalación de un servidor. 
- **Amplio acceso a la red**  Las APIs de los microservicios y los tableros de Power BI se consumen por HTTPS desde navegador, escritorio o celular.  Elimina el envío de archivos por correo; la gerencia consulta desde cualquier lugar. 
- **Asignación común de recursos**  Azure atiende a muchos clientes sobre la misma infraestructura (multi-tenant); ambos microservicios comparten un mismo entorno de Container Apps.  La empresa usa infraestructura de nivel empresarial sin tener que comprarla. 
- **Rápida elasticidad**  Cada microservicio escala de 0 a 3 réplicas según la carga, de forma independiente; Azure SQL serverless ajusta su capacidad y se pausa sin uso.  Resuelve la saturación del servidor local en los cierres de mes. 
- **Servicio medido**  El consumo se mide y factura por uso; Azure Monitor y Cost Management muestran métricas, costos y alertas de presupuesto.  Cambia la inversión fija en hardware por un gasto proporcional al uso real. 
+ Característica	Aplicación en CloudeData
+**Autoservicio bajo demanda** -->	El equipo crea Blob Storage, Azure SQL y Container Apps desde el portal o Azure CLI, sin intervención del proveedor.
+**Amplio acceso a la red** -->	Las APIs de los microservicios y los tableros de Power BI se consumen por HTTPS desde navegador.
+**Agrupación de recursos** -->	Azure atiende a muchos clientes sobre la misma infraestructura (multi-tenant); ambos microservicios comparten un mismo entorno de Container Apps.
+**Elasticidad rápida** -->	Cada microservicio escala de 0 a 3 réplicas según la carga; Azure SQL serverless ajusta su capacidad y se pausa sin uso.
+**Servicio medido** -->	El consumo se mide y factura por uso; Azure Monitor y Cost Management muestran métricas y costos, como tambien con la implementacion de alertas de consumo mediante el panel de alertas.
+
 
 ### 3.2 Modelos de servicio
 
- Modelo  Servicios del proyecto 
- ---  --- 
  IaaS  No se usa 
  PaaS  Azure Blob Storage, Azure SQL Database, Azure Container Apps 
  SaaS  Power BI, GitHub 
 
 ### 3.3 Modelo de despliegue
 
-**Nube pública:** todos los servicios corren en Microsoft Azure; las demás fuentes se simulan con archivos. Si en el futuro se conectaran directamente las bases Oracle y SQL Server de la empresa, el modelo pasaría a ser **nube híbrida**.
+Nube pública: todos los servicios corren en Microsoft Azure; las demás fuentes se simulan con archivos. Si en el futuro se conectaran directamente las bases Oracle y SQL Server de la empresa, el modelo podria pasar a ser nube híbrida.
 
 ### 3.4 Responsabilidad compartida
 
 En PaaS, Microsoft administra el hardware, la red, el sistema operativo y los parches. El equipo de desarrollo es responsable del código de los microservicios, los datos, la configuración de accesos y la protección de credenciales y tokens.
 
----
 
 ## 4. Mapeo de actores NIST SP 500-292
 
-La arquitectura de referencia NIST SP 500-292 define cinco actores que participan en todo sistema en la nube. En CloudData se identifican así:
+La arquitectura de referencia NIST SP 500-292 define cinco actores que participan en todo sistema en la nube. En AzureData se identifican así:
 
- Actor NIST  Quién cumple el rol  Responsabilidades en el proyecto  Impacto económico 
- ---  ---  ---  --- 
- **Consumidor** (*Cloud Consumer*)  La cadena de tiendas de tecnología: encargados de tienda, gerencia y jefe de compras  Usa la aplicación, carga los datos y consume los reportes  Paga solo por uso (gasto operativo, OpEx). Elimina la compra de servidores (gasto de capital, CapEx) y reduce horas de trabajo manual. 
- **Proveedor** (*Cloud Provider*)  Microsoft Azure  Opera los centros de datos, Container Apps, Azure SQL y Blob Storage; garantiza disponibilidad y seguridad física  Recupera su inversión por economías de escala al compartir infraestructura entre millones de clientes; ofrece cuotas gratuitas que reducen el costo de entrada. 
- **Intermediario** (*Cloud Broker*)  El equipo de desarrollo de CloudData  Agrega e integra varios servicios de Azure y Power BI en una sola solución para el consumidor  Le ahorra a la empresa el costo de integrar los servicios por su cuenta. 
- **Auditor** (*Cloud Auditor*)  Auditores independientes que certifican a Azure (ISO/IEC 27001, SOC 1/2/3), con informes publicados en el Microsoft Service Trust Portal  Evalúan de forma independiente la seguridad, privacidad y rendimiento del proveedor  La empresa no paga auditorías propias de infraestructura: hereda las certificaciones del proveedor. 
- **Operador** (*Cloud Carrier*)  Los proveedores de internet de las tiendas y la red global de Microsoft  Transportan los datos entre tiendas, Azure y los usuarios de Power BI  Costo de conectividad que la empresa ya paga. La entrada de datos a Azure es gratuita y los primeros 100 GB mensuales de salida no se cobran. 
+| Actor NIST | Quién cumple el rol | Responsabilidades en el proyecto | Impacto económico |
+
+| **Consumidor** (*Cloud Consumer*) | La cadena de tiendas de tecnología: encargados de tienda, gerencia y jefe de compras | Usa la aplicación, carga los datos y consume los reportes | Paga solo por uso (gasto operativo, OpEx). Elimina la compra de servidores (gasto de capital, CapEx) y reduce horas de trabajo manual. |
+| **Proveedor** (*Cloud Provider*) | Microsoft Azure | Opera los centros de datos, Container Apps, Azure SQL y Blob Storage; garantiza disponibilidad y seguridad física | Recupera su inversión por economías de escala al compartir infraestructura entre millones de clientes; ofrece cuotas gratuitas que reducen el costo de entrada. |
+| **Intermediario** (*Cloud Broker*) | El equipo de desarrollo de AzureData | Agrega e integra varios servicios de Azure y Power BI en una sola solución para el consumidor | Le ahorra a la empresa el costo de integrar los servicios por su cuenta. |
+| **Auditor** (*Cloud Auditor*) | Auditores independientes que certifican a Azure (ISO/IEC 27001, SOC 1/2/3), con informes publicados en el Microsoft Service Trust Portal | Evalúan de forma independiente la seguridad, privacidad y rendimiento del proveedor | La empresa no paga auditorías propias de infraestructura: hereda las certificaciones del proveedor. |
+| **Operador** (*Cloud Carrier*) | Los proveedores de internet de las tiendas y la red global de Microsoft | Transportan los datos entre tiendas, Azure y los usuarios de Power BI | Costo de conectividad que la empresa ya paga. La entrada de datos a Azure es gratuita y los primeros 100 GB mensuales de salida no se cobran. |
 
 ### 4.1 Análisis del impacto económico
 
- Concepto  Servidor propio  CloudData en la nube 
- ---  ---  --- 
- Inversión inicial  Compra de servidor, licencias y espacio físico (CapEx)  Ninguna; la infraestructura se crea bajo demanda 
- Costo mensual  Fijo, aunque el servidor esté ocioso  Variable y proporcional al uso; cómputo en cero sin peticiones 
- Picos de fin de mes  Se compra capacidad para el peor caso y se desperdicia el resto del mes  La elasticidad agrega réplicas solo durante el pico 
- Mantenimiento  Personal propio para parches, respaldos y hardware  Incluido en el servicio PaaS 
- Riesgo financiero  Alto: el hardware se deprecia aunque el proyecto cambie  Bajo: al eliminar el grupo de recursos, el gasto se detiene 
+| Concepto | Servidor propio | AzureData en la nube |
 
-**Costo estimado del entorno de desarrollo** (precios de referencia sujetos a cambio; validar en la [calculadora de precios de Azure](https://azure.microsoft.com/pricing/calculator/)):
+| Inversión inicial | Compra de servidor, licencias y espacio físico (CapEx) | Ninguna; la infraestructura se crea bajo demanda |
+| Costo mensual | Fijo, aunque el servidor esté ocioso | Variable y proporcional al uso; cómputo en cero sin peticiones |
+| Picos de fin de mes | Se compra capacidad para el peor caso y se desperdicia el resto del mes | La elasticidad agrega réplicas solo durante el pico |
+| Mantenimiento | Personal propio para parches, respaldos y hardware | Incluido en el servicio PaaS |
+| Riesgo financiero | Alto: el hardware se deprecia aunque el proyecto cambie | Bajo: al eliminar el grupo de recursos, el gasto se detiene |
 
- Servicio  Base del cobro  Costo mensual estimado 
- ---  ---  --- 
- Azure Container Apps  Concesión gratuita mensual: 180.000 vCPU-segundos, 360.000 GiB-segundos y 2 millones de peticiones  0 USD dentro de la concesión 
- Azure SQL Database  Oferta gratuita: 100.000 vCore-segundos y 32 GB por base de datos al mes, o serverless con autopausa  0 USD con la oferta gratuita; pocos USD en serverless 
- Azure Blob Storage  Por GB almacenado y operación  Menos de 1 USD para pocos GB 
- Power BI Desktop y GitHub  Gratuitos para este uso  0 USD 
+| Servicio | Base del cobro | Costo mensual estimado |
+| --- | --- | --- |
+| Azure Container Apps | Concesión gratuita mensual: 180.000 vCPU-segundos, 360.000 GiB-segundos y 2 millones de peticiones | 0 USD dentro de la concesión |
+| Azure SQL Database | Oferta gratuita: 100.000 vCore-segundos y 32 GB por base de datos al mes, o serverless con autopausa | 0 USD con la oferta gratuita; pocos USD en serverless |
+| Azure Blob Storage | Por GB almacenado y operación | Menos de 1 USD para pocos GB |
+| Power BI Desktop y GitHub | Gratuitos para este uso | 0 USD |
 
-El proyecto se ejecuta dentro del crédito de **Azure for Students (100 USD)**, con un presupuesto de 20 USD y alerta al 80 % en Cost Management.
-
----
+El proyecto se ejecutara dentro del crédito de Azure for Students (100 USD), con un presupuesto de 20 USD y alerta al 80 % en Cost Management.
 
 ## 5. Diagrama de arquitectura
 
-El sistema tiene dos microservicios en Python con responsabilidades separadas. **No se llaman entre sí**: se comunican a través de la capa de persistencia (Blob Storage y Azure SQL).
+El sistema tiene dos microservicios en Python con responsabilidades separadas. No se llaman entre sí: se comunican a través de la capa de persistencia (Blob Storage y Azure SQL).
 
 ### 5.1 Componentes y protocolos
 
@@ -232,7 +213,7 @@ flowchart LR
 
 ### 5.2 Vista general
 
-![Arquitectura de CloudData](docs/arquitectura.png)
+
 
 ### 5.3 Flujo de datos
 
@@ -273,10 +254,10 @@ flowchart LR
 
 ### 5.7 Por qué la arquitectura es desacoplada
 
-- **Sin llamadas directas entre microservicios:** el Microservicio 1 escribe en la capa de persistencia y el Microservicio 2 solo lee de ella.
-- **Despliegue independiente:** cada uno tiene su propio código, imagen Docker, workflow de GitHub Actions y Container App.
-- **Escalado independiente:** el de carga crece en los cierres de mes y el de reportes cuando la gerencia consulta.
-- **Tolerancia a fallos:** si el Microservicio 1 falla, los reportes siguen disponibles con los datos ya consolidados.
+- Sin llamadas directas entre microservicios: el Microservicio 1 escribe en la capa de persistencia y el Microservicio 2 solo lee de ella.
+- Despliegue independiente: cada uno tiene su propio código, imagen Docker, workflow de GitHub Actions y Container App.
+- Escalado independiente: el de carga crece en los cierres de mes y el de reportes cuando la gerencia consulta.
+- Tolerancia a fallos: si el Microservicio 1 falla, los reportes siguen disponibles con los datos ya consolidados.
 
 ---
 
@@ -284,10 +265,10 @@ flowchart LR
 
 ### 6.1 Convenciones
 
-- **URL base:** cada microservicio tiene su propia dirección en Azure Container Apps, por ejemplo `https://carga-limpieza.<entorno>.azurecontainerapps.io` y `https://reportes.<entorno>.azurecontainerapps.io`.
-- **Formato:** JSON en UTF-8. Fechas en ISO 8601 (`AAAA-MM-DD`). Montos en pesos, sin separadores de miles.
-- **Errores:** código HTTP adecuado y cuerpo `{"detail": "mensaje"}`.
-- **Documentación interactiva:** cada servicio publica su especificación OpenAPI en `/docs`.
+- URL base: cada microservicio tiene su propia dirección en Azure Container Apps, por ejemplo `https://carga-limpieza.<entorno>.azurecontainerapps.io` y `https://reportes.<entorno>.azurecontainerapps.io`.
+- Formato: JSON en UTF-8. Fechas en ISO 8601 (`AAAA-MM-DD`). Montos en pesos, sin separadores de miles.
+- Errores: código HTTP adecuado y cuerpo `{"detail": "mensaje"}`.
+- Documentación interactiva: cada servicio publica su especificación OpenAPI en `/docs`.
 
 ### 6.2 Resumen de endpoints
 
@@ -309,14 +290,14 @@ flowchart LR
 
 Sube un archivo de ventas (CSV, XLSX o XML) y aplica las reglas de calidad. Columnas obligatorias: `id_venta`, `fecha`, `tienda`, `producto`, `cantidad`, `precio`.
 
-**Petición** (`multipart/form-data`):
+Petición (`multipart/form-data`):
 
 ```bash
 curl -X POST "https://carga-limpieza.<entorno>.azurecontainerapps.io/upload" \
      -F "archivo=@ventas.csv"
 ```
 
-**Respuesta `201 Created`:**
+Respuesta `201 Created`:
 
 ```json
 {
@@ -333,7 +314,7 @@ curl -X POST "https://carga-limpieza.<entorno>.azurecontainerapps.io/upload" \
 }
 ```
 
-**Errores:**
+Errores:
 
  Código  Causa  Cuerpo 
  ---  ---  --- 
@@ -411,9 +392,9 @@ El workflow `pr-title.yml` valida que el título de cada Pull Request siga esta 
 
 ### 7.4 Tablero y backlog
 
-- **GitHub Projects:** tablero agrupado por Milestone con el backlog inicial.
-- **Milestones:** Hito 1 – Diseño y gestión · Hito 2 – Persistencia e infraestructura · Hito 3 – Microservicios en la nube · Hito 4 – Visualización y cierre.
-- **Historias de usuario:** 13 Issues con la etiqueta `user-story`, formato «Como [rol], quiero [acción], para [beneficio]», criterios de aceptación y checklist de tareas técnicas. Su contenido está en [`scripts/backlog/`](scripts/backlog) y se publica con [`scripts/setup_github.sh`](scripts/setup_github.sh).
+- GitHub Projects: tablero agrupado por Milestone con el backlog inicial.
+- Milestones: Hito 1 – Diseño y gestión · Hito 2 – Persistencia e infraestructura · Hito 3 – Microservicios en la nube · Hito 4 – Visualización y cierre.
+- Historias de usuario: 13 Issues con la etiqueta `user-story`, formato «Como [rol], quiero [acción], para [beneficio]», criterios de aceptación y checklist de tareas técnicas. Su contenido está en [`scripts/backlog/`](scripts/backlog) y se publica con [`scripts/setup_github.sh`](scripts/setup_github.sh).
 
 ### 7.5 Plantillas
 
