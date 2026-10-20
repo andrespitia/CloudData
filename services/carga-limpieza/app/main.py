@@ -12,8 +12,7 @@ from app.procesamiento import FormatoNoSoportado, carga_inicial, procesar_archiv
 @asynccontextmanager
 async def ciclo_de_vida(_app: FastAPI):
     almacenamiento.inicializar()
-    # Si CARGA_INICIAL_DIR apunta a una carpeta con ejemplos y la base está vacía,
-    # se cargan automáticamente para que los reportes tengan datos desde el inicio.
+    
     carga_inicial(os.getenv("CARGA_INICIAL_DIR"))
     yield
 

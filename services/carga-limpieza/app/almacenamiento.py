@@ -1,14 +1,3 @@
-"""Capa de persistencia del Microservicio 1.
-
-Guarda:
-  - el archivo original en  <DATA_DIR>/raw/
-  - el archivo depurado en   <DATA_DIR>/processed/
-  - las ventas consolidadas y el historial de cargas en <DATA_DIR>/clouddata.db (SQLite)
-
-En Docker Compose, DATA_DIR es un volumen compartido con el Microservicio 2.
-En la nube, este módulo se reemplaza por Azure Blob Storage y Azure SQL
-sin cambiar los endpoints.
-"""
 
 import json
 import os
