@@ -1,0 +1,26 @@
+name: ci-carga-limpieza
+
+on:
+  push:
+    branches: [main]
+    paths: ['services/carga-limpieza/**', '.github/workflows/ci-carga-limpieza.yml']
+  pull_request:
+    paths: ['services/carga-limpieza/**', '.github/workflows/ci-carga-limpieza.yml']
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/carga-limpieza
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pytest
+      - name: Ejecutar pruebas
+        run: pytest -v
+      - name: Construir imagen Docker
+        run: docker build -t carga-limpieza:${{ github.sha }} .

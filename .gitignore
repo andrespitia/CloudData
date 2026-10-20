@@ -1,0 +1,75 @@
+# ==========================================================
+# .gitignore - CloudData
+# Stack: Python 3.12 + FastAPI + pandas, Docker, Azure, Power BI
+# ==========================================================
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ---------- Secretos y configuración local ----------
+# Nunca subir credenciales: cadenas de conexión a Azure SQL,
+# claves de Blob Storage o tokens. Usar variables de entorno
+# o secretos de GitHub / Container Apps.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+local.settings.json
+
+# ---------- Azure ----------
+.azure/
+*.publishsettings
+azureauth.json
+
+# ---------- Docker ----------
+docker-compose.override.yml
+
+# ---------- Datos generados ----------
+# Los archivos de ejemplo en data-samples/ SÍ se versionan.
+# Las salidas de procesamiento local no.
+salida/
+tmp/
+*.parquet
+
+# ---------- Power BI ----------
+# El .pbix sí se versiona en powerbi/; se ignoran temporales.
+*.pbix.bak
+~$*.pbix
+
+# ---------- Editores y sistema operativo ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

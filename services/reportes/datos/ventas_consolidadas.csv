@@ -1,0 +1,5 @@
+id_venta,fecha,tienda,producto,cantidad,precio,total
+V001,2026-10-01,Centro,Mouse inalámbrico,3,45000,135000
+V002,2026-10-01,Norte,Teclado USB,2,120000,240000
+V003,2026-10-02,Centro,Mouse inalámbrico,1,45000,45000
+V005,2026-10-03,Norte,Cable HDMI,4,32000,128000

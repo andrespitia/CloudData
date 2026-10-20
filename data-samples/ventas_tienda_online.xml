@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ventas>
+  <venta>
+    <id_venta>W201</id_venta>
+    <fecha>2026-10-05</fecha>
+    <tienda>Online</tienda>
+    <producto>Audífonos</producto>
+    <cantidad>2</cantidad>
+    <precio>38000</precio>
+  </venta>
+  <venta>
+    <id_venta>W202</id_venta>
+    <fecha>2026-10-05</fecha>
+    <tienda>online</tienda>
+    <producto>Cable HDMI</producto>
+    <cantidad>0</cantidad>
+    <precio>32000</precio>
+  </venta>
+  <venta>
+    <id_venta>W203</id_venta>
+    <fecha>2026-10-06</fecha>
+    <tienda>Online</tienda>
+    <producto>Audífonos</producto>
+    <cantidad>1</cantidad>
+    <precio>38000</precio>
+  </venta>
+</ventas>
