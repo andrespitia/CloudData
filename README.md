@@ -122,7 +122,7 @@ CloudData cumple las cinco características esenciales, usa los modelos PaaS y S
 
 ### 3.1 Las 5 características esenciales
 
- Característica	Aplicación en CloudeData
+ Característica	Aplicación en CloudData
 **Autoservicio bajo demanda** -->	El equipo crea Blob Storage, Azure SQL y Container Apps desde el portal o Azure CLI, sin intervención del proveedor.
 **Amplio acceso a la red** -->	Las APIs de los microservicios y los tableros de Power BI se consumen por HTTPS desde navegador.
 **Agrupación de recursos** -->	Azure atiende a muchos clientes sobre la misma infraestructura (multi-tenant); ambos microservicios comparten un mismo entorno de Container Apps.
@@ -147,19 +147,19 @@ En PaaS, Microsoft administra el hardware, la red, el sistema operativo y los pa
 
 ## 4. Mapeo de actores NIST SP 500-292
 
-La arquitectura de referencia NIST SP 500-292 define cinco actores que participan en todo sistema en la nube. En AzureData se identifican así:
+La arquitectura de referencia NIST SP 500-292 define cinco actores que participan en todo sistema en la nube. En CloudData se identifican así:
 
 | Actor NIST | Quién cumple el rol | Responsabilidades en el proyecto | Impacto económico |
 
 | **Consumidor** (*Cloud Consumer*) | La cadena de tiendas de tecnología: encargados de tienda, gerencia y jefe de compras | Usa la aplicación, carga los datos y consume los reportes | Paga solo por uso (gasto operativo, OpEx). Elimina la compra de servidores (gasto de capital, CapEx) y reduce horas de trabajo manual. |
 | **Proveedor** (*Cloud Provider*) | Microsoft Azure | Opera los centros de datos, Container Apps, Azure SQL y Blob Storage; garantiza disponibilidad y seguridad física | Recupera su inversión por economías de escala al compartir infraestructura entre millones de clientes; ofrece cuotas gratuitas que reducen el costo de entrada. |
-| **Intermediario** (*Cloud Broker*) | El equipo de desarrollo de AzureData | Agrega e integra varios servicios de Azure y Power BI en una sola solución para el consumidor | Le ahorra a la empresa el costo de integrar los servicios por su cuenta. |
+| **Intermediario** (*Cloud Broker*) | El equipo de desarrollo de CloudData | Agrega e integra varios servicios de Azure y Power BI en una sola solución para el consumidor | Le ahorra a la empresa el costo de integrar los servicios por su cuenta. |
 | **Auditor** (*Cloud Auditor*) | Auditores independientes que certifican a Azure (ISO/IEC 27001, SOC 1/2/3), con informes publicados en el Microsoft Service Trust Portal | Evalúan de forma independiente la seguridad, privacidad y rendimiento del proveedor | La empresa no paga auditorías propias de infraestructura: hereda las certificaciones del proveedor. |
 | **Operador** (*Cloud Carrier*) | Los proveedores de internet de las tiendas y la red global de Microsoft | Transportan los datos entre tiendas, Azure y los usuarios de Power BI | Costo de conectividad que la empresa ya paga. La entrada de datos a Azure es gratuita y los primeros 100 GB mensuales de salida no se cobran. |
 
 ### 4.1 Análisis del impacto económico
 
-| Concepto | Servidor propio | AzureData en la nube |
+| Concepto | Servidor propio | CloudData en la nube |
 
 | Inversión inicial | Compra de servidor, licencias y espacio físico (CapEx) | Ninguna; la infraestructura se crea bajo demanda |
 | Costo mensual | Fijo, aunque el servidor esté ocioso | Variable y proporcional al uso; cómputo en cero sin peticiones |
@@ -258,7 +258,7 @@ Por ahora la aplicación se ejecuta **en local**: cada microservicio corre en el
 
 Cada servicio usa un **puerto distinto** porque son procesos independientes, igual que serían dos contenedores separados en la nube.
 
-**Datos en local:** el Microservicio 2 lee las ventas consolidadas desde el archivo `services/reportes/datos/ventas_consolidadas.csv` (variable de entorno `VENTAS_FUENTE`), que hace las veces de la base de datos mientras no se use Azure SQL.
+**Persistencia:** los dos microservicios comparten la carpeta de datos (`DATA_DIR`). El Microservicio 1 guarda el archivo original en `raw/`, el depurado en `processed/` y las ventas en la base SQLite `clouddata.db`; el Microservicio 2 lee esa misma base en modo solo lectura. Con Docker Compose la carpeta es el volumen `datos`; sin Docker es la carpeta `data/` en la raíz del repositorio.
 
 ### 6.2 Convenciones
 
@@ -271,7 +271,7 @@ Cada servicio usa un **puerto distinto** porque son procesos independientes, igu
 | Servicio | Verbo | Ruta | Descripción | Respuesta | Estado |
 | --- | --- | --- | --- | --- | --- |
 | Carga y limpieza (`:8000`) | `POST` | `/upload` | Sube y procesa un archivo de ventas | `201 Created` | Implementado |
-| Carga y limpieza (`:8000`) | `GET` | `/cargas/{id_carga}` | Informe de calidad de una carga | `200 OK` | Planificado |
+| Carga y limpieza (`:8000`) | `GET` | `/cargas/{id_carga}` | Informe de calidad de una carga | `200 OK` | Implementado |
 | Carga y limpieza (`:8000`) | `GET` | `/health` | Estado del servicio | `200 OK` | Implementado |
 | Reportes (`:8001`) | `GET` | `/kpi/ventas` | Ventas totales, número de ventas y ticket promedio | `200 OK` | Implementado |
 | Reportes (`:8001`) | `GET` | `/kpi/ventas-por-tienda` | Total vendido por tienda, de mayor a menor | `200 OK` | Implementado |
@@ -297,6 +297,7 @@ curl -X POST "http://localhost:8000/upload" \
 
 ```json
 {
+  "id_carga": "c-20261020205350-a763a1",
   "archivo": "ventas.csv",
   "estado": "procesado",
   "recibidas": 7,
@@ -305,7 +306,8 @@ curl -X POST "http://localhost:8000/upload" \
     "sin_id": 1,
     "cantidad_invalida": 1,
     "fecha_invalida": 0,
-    "duplicadas": 1
+    "duplicadas": 1,
+    "ya_registradas": 0
   }
 }
 ```
@@ -316,6 +318,21 @@ curl -X POST "http://localhost:8000/upload" \
 | --- | --- | --- |
 | `415` | Formato no soportado | `{"detail": "Formato no soportado. Use CSV, XLSX o XML."}` |
 | `422` | Faltan columnas obligatorias | `{"detail": "Faltan columnas obligatorias: ['precio']"}` |
+
+
+```markdown
+`ya_registradas` cuenta las ventas que ya estaban en la base por una carga anterior: no se vuelven a insertar.
+
+#### `GET /cargas/{id_carga}`
+
+Devuelve el informe de calidad de una carga anterior, con la misma estructura de la respuesta de `POST /upload`.
+
+    curl http://localhost:8000/cargas/c-20261020205350-a763a1
+
+| Código | Causa | Cuerpo |
+| --- | --- | --- |
+| `404` | La carga no existe | `{"detail": "La carga no existe."}` |
+```
 
 #### `GET /health`
 
@@ -437,37 +454,46 @@ El workflow `pr-title.yml` valida que el título de cada Pull Request siga esta 
 
 ### 7.5 Integración continua
 
-Cada microservicio tiene su propio workflow (`ci-carga-limpieza.yml` y `ci-reportes.yml`) que ejecuta las pruebas y construye la imagen Docker solo cuando cambia su carpeta.
+| Workflow | Qué verifica |
+| --- | --- |
+| `ci-carga-limpieza.yml` | Pruebas e imagen Docker del Microservicio 1 (solo cuando cambia su carpeta) |
+| `ci-reportes.yml` | Pruebas e imagen Docker del Microservicio 2 (solo cuando cambia su carpeta) |
+| `compose.yml` | Levanta todo con `docker compose`, sube un archivo y comprueba que los reportes lo reflejan |
+| `pr-title.yml` | Que el título de cada Pull Request siga los commits semánticos |
+```
 
 ## 8. Estructura del repositorio
 
 ```
-azuredata/
+clouddata/
 ├── README.md
 ├── CONTRIBUTING.md                 # ramas y commits semánticos
+├── docker-compose.yml              # despliegue completo con un comando
 ├── .gitignore
 ├── .github/
 │   ├── ISSUE_TEMPLATE/user_story.md
 │   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/                  # ci-carga-limpieza, ci-reportes, pr-title
-├── docs/arquitectura.png
-├── data-samples/                  # archivos de prueba con errores típicos
+│   └── workflows/                  # ci-carga-limpieza, ci-reportes, compose, pr-title
+├── docs/
+│   ├── arquitectura.png
+│   └── componentes_protocolos.png
+├── data-samples/                   # archivos de prueba (se cargan al iniciar)
 │   ├── ventas.csv
 │   ├── ventas_tienda_sur.xlsx
 │   └── ventas_tienda_online.xml
 ├── services/
 │   ├── carga-limpieza/             # Microservicio 1: Python + pandas + FastAPI
-│   │   ├── app/  (main.py, limpieza.py)
+│   │   ├── app/  (main.py, limpieza.py, procesamiento.py, almacenamiento.py)
 │   │   ├── tests/
 │   │   ├── requirements.txt
 │   │   └── Dockerfile
 │   └── reportes/                   # Microservicio 2: Python + FastAPI
-│       ├── app/  (main.py, kpi.py)
+│       ├── app/  (main.py, kpi.py, datos.py)
 │       ├── tests/
 │       ├── requirements.txt
 │       └── Dockerfile
 ├── powerbi/                        # reporte .pbix
 └── scripts/
-    ├── setup_github.sh             # crea etiquetas, milestones, issues y tablero
+    ├── setup_github.sh             # crea y actualiza etiquetas, milestones, issues y tablero
     └── backlog/                    # historias de usuario
 ```
