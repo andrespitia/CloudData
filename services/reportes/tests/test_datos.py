@@ -32,3 +32,11 @@ def test_lee_ventas_consolidadas(tmp_path, monkeypatch):
     ventas = obtener_ventas()
     assert kpi.resumen(ventas)["ventas_totales"] == 375000.0
     assert kpi.ventas_por_tienda(ventas)[0] == {"tienda": "Norte", "total": 240000.0}
+
+
+def test_elige_motor_segun_database_url(monkeypatch):
+    from app import datos
+
+    assert not datos.usa_postgres()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db:5432/clouddata")
+    assert datos.usa_postgres()

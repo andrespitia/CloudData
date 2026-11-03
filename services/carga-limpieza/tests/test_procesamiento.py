@@ -55,3 +55,11 @@ def test_carga_inicial_solo_si_la_base_esta_vacia(tmp_path):
 
 def test_obtener_carga_inexistente():
     assert almacenamiento.obtener_carga("no-existe") is None
+
+
+def test_elige_motor_segun_database_url(monkeypatch):
+    assert not almacenamiento.usa_postgres()
+    assert almacenamiento._q("SELECT ?") == "SELECT ?"
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db:5432/clouddata")
+    assert almacenamiento.usa_postgres()
+    assert almacenamiento._q("VALUES (?, ?)") == "VALUES (%s, %s)"
