@@ -1,5 +1,18 @@
+
+#Caches de Python y de herramientas
 __pycache__/
 *.pyc
-.venv/
 .pytest_cache/
+.ruff_cache/
+
+#Entorno virtual local
+.venv/
+
+#Pruebas y herramientas de desarrollo
 tests/
+pytest.ini
+requirements-dev.txt
+
+
+Dockerfile
+.dockerignore
