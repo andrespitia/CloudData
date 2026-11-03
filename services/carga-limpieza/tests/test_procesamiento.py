@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 
@@ -11,7 +10,7 @@ CSV = (
     "V002,01/10/2026,norte,Teclado USB,2,120000\n"
     "V002,01/10/2026,norte,Teclado USB,2,120000\n"
     ",2026-10-02,Sur,Audífonos,5,38000\n"
-).encode("utf-8")
+).encode()
 
 
 @pytest.fixture(autouse=True)

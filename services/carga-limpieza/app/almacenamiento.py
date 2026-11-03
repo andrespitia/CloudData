@@ -35,7 +35,7 @@ def ruta_db() -> Path:
 
 
 def _q(sql: str) -> str:
-    
+
     return sql.replace("?", "%s") if usa_postgres() else sql
 
 

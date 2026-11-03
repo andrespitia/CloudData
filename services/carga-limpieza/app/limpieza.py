@@ -20,20 +20,20 @@ def limpiar(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
     recibidas = len(df)
 
-    
+
     df = df.dropna(subset=["id_venta"])
     sin_id = recibidas - len(df)
 
-    
+
     df["cantidad"] = pd.to_numeric(df["cantidad"], errors="coerce")
     antes = len(df)
     df = df[df["cantidad"] > 0]
     cantidad_invalida = antes - len(df)
 
-    
+
     df["tienda"] = df["tienda"].astype(str).str.strip().str.title()
 
-    
+
     iso = pd.to_datetime(df["fecha"], format="%Y-%m-%d", errors="coerce")
     latino = pd.to_datetime(df["fecha"], format="%d/%m/%Y", errors="coerce")
     df["fecha"] = iso.fillna(latino).dt.date
@@ -41,12 +41,12 @@ def limpiar(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df = df.dropna(subset=["fecha"])
     fecha_invalida = antes - len(df)
 
-    
+
     antes = len(df)
     df = df.drop_duplicates(subset=["id_venta"])
     duplicadas = antes - len(df)
 
-    
+
     df["total"] = df["cantidad"] * df["precio"]
 
     resumen = {
