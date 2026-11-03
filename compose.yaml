@@ -1,51 +1,83 @@
-# CloudData - despliegue local reproducible
-#
-# Uso:
-#   docker compose up --build
-#
-# Microservicio 1 (carga y limpieza): http://localhost:8000/docs
-# Microservicio 2 (reportes / KPI):   http://localhost:8001/docs
-#
-# Los dos servicios comparten el volumen "datos" (capa de persistencia):
-#   /data/raw/          archivos originales
-#   /data/processed/    archivos depurados
-#   /data/clouddata.db  ventas consolidadas e historial de cargas (SQLite)
-#
-# Al iniciar por primera vez, el Microservicio 1 carga los archivos de
-# data-samples/ para que los reportes muestren datos desde el comienzo.
-# Para empezar desde cero:  docker compose down -v
+# ==========================================================
+# CloudData - en entorno cloud azure (mi entorno local)
+#andres espitia ramirez
+# Contenedores:
+#   db              PostgreSQL: ventas consolidadas y cargas
+#   carga-limpieza  Microservicio 1  -> http://localhost:8000/docs
+#   reportes        Microservicio 2  -> http://localhost:8001/docs
+# ==========================================================
+
+name: clouddata
+
+#seguridad de los microservicos 
+x-seguridad: &seguridad
+  read_only: true              
+  tmpfs:
+    - /tmp                     
+  security_opt:
+    - no-new-privileges:true   
+  cap_drop:
+    - ALL                     
+  restart: unless-stopped
 
 services:
-  carga-limpieza:
-    build: ./services/carga-limpieza
-    ports:
-      - "8000:8000"
+  db:
+    image: postgres:17-alpine
     environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clouddata}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clouddata_local}
+      POSTGRES_DB: ${POSTGRES_DB:-clouddata}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend               
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  carga-limpieza:
+    <<: *seguridad
+    build: ./services/carga-limpieza
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-clouddata}:${POSTGRES_PASSWORD:-clouddata_local}@db:5432/${POSTGRES_DB:-clouddata}
       DATA_DIR: /data
       CARGA_INICIAL_DIR: /samples
     volumes:
-      - datos:/data
-      - ./data-samples:/samples:ro
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-    restart: unless-stopped
+      - archivos:/data                    
+      - ./data-samples:/samples:ro        
+    ports:
+      - "${CARGA_PORT:-8000}:8000"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
 
   reportes:
+    <<: *seguridad
     build: ./services/reportes
-    ports:
-      - "8001:8000"
     environment:
-      DATA_DIR: /data
-    volumes:
-      - datos:/data
+      DATABASE_URL: postgresql://${POSTGRES_USER:-clouddata}:${POSTGRES_PASSWORD:-clouddata_local}@db:5432/${POSTGRES_DB:-clouddata}
+    ports:
+      - "${REPORTES_PORT:-8001}:8000"
+    networks:
+      - frontend
+      - backend
     depends_on:
+      db:
+        condition: service_healthy
       carga-limpieza:
         condition: service_healthy
-    restart: unless-stopped
+
+networks:
+  frontend:                    
+  backend:
+    internal: true             
 
 volumes:
-  datos:
+  pgdata:                      
+  archivos:                   
