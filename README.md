@@ -465,35 +465,113 @@ El workflow `pr-title.yml` valida que el título de cada Pull Request siga esta 
 ## 8. Estructura del repositorio
 
 ```
-clouddata/
+CloudData/
 ├── README.md
-├── CONTRIBUTING.md                 # ramas y commits semánticos
-├── docker-compose.yml              # despliegue completo con un comando
+├── CONTRIBUTING.md                 
+├── compose.yaml                   
+├── .env.example                    
+├── ruff.toml                       
 ├── .gitignore
 ├── .github/
-│   ├── ISSUE_TEMPLATE/user_story.md
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── config.yml
+│   │   └── user_story.md           
 │   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/                  # ci-carga-limpieza, ci-reportes, compose, pr-title
-├── docs/
-│   ├── arquitectura.png
-│   └── componentes_protocolos.png
-├── data-samples/                   # archivos de prueba (se cargan al iniciar)
+│   └── workflows/
+│       ├── ci.yml                  
+│       └── pr-title.yml            
+├── Doc/
+│   ├── AC.png                      
+│   └── Arquitectura.png            
+├── data-samples/                   
 │   ├── ventas.csv
 │   ├── ventas_tienda_sur.xlsx
 │   └── ventas_tienda_online.xml
 ├── services/
-│   ├── carga-limpieza/             # Microservicio 1: Python + pandas + FastAPI
-│   │   ├── app/  (main.py, limpieza.py, procesamiento.py, almacenamiento.py)
-│   │   ├── tests/
-│   │   ├── requirements.txt
-│   │   └── Dockerfile
-│   └── reportes/                   # Microservicio 2: Python + FastAPI
-│       ├── app/  (main.py, kpi.py, datos.py)
-│       ├── tests/
+│   ├── carga-limpieza/             
+│   │   ├── app/                   
+│   │   ├── tests/                 
+│   │   ├── Dockerfile             
+│   │   ├── .dockerignore
+│   │   ├── pytest.ini
+│   │   ├── requirements.txt        
+│   │   └── requirements-dev.txt    
+│   └── reportes/                   
+│       ├── app/                    
+│       ├── tests/                  
+│       ├── Dockerfile              
+│       ├── .dockerignore
+│       ├── pytest.ini
 │       ├── requirements.txt
-│       └── Dockerfile
-├── powerbi/                        # reporte .pbix
+│       └── requirements-dev.txt
+├── tests/
+│   └── integracion/
+│       └── test_flujo_completo.py  
+├── powerbi/                        
 └── scripts/
-    ├── setup_github.sh             # crea y actualiza etiquetas, milestones, issues y tablero
-    └── backlog/                    # historias de usuario
+    ├── setup_github.sh             
+    └── backlog/                    
 ```
+## 9. Hito 2 · Contenedores, entorno local e integracion continua
+
+### 9.1 Contenedores
+
+| Contenedor | Imagen | Funcion | Puerto | Redes |
+| --- | --- | --- | --- | --- |
+| `db` | `postgres:17-alpine` | Ventas consolidadas e informes de carga | Ninguno (solo red interna) | `backend` |
+| `carga-limpieza` | `services/carga-limpieza/Dockerfile` | Microservicio 1: carga y limpieza | `8000` | `frontend`, `backend` |
+| `reportes` | `services/reportes/Dockerfile` | Microservicio 2: indicadores (KPI) | `8001` | `frontend`, `backend` |
+
+- **Redes:** `backend` es interna (`internal: true`): solo los contenedores llegan a PostgreSQL, y no tiene salida a internet. `frontend` publica los puertos de los microservicios.
+- **Volumenes:** `pgdata` (datos de PostgreSQL) y `archivos` (`raw/` y `processed/`). Sobreviven a `docker compose down` y a los reinicios. Solo `docker compose down -v` los borra.
+- **Variables de entorno:** se definen en `.env`, a partir de `.env.example`, que no contiene credenciales reales.
+
+### 9.2 Dockerfiles de produccion
+
+| Practica | Como se aplica |
+| --- | --- |
+| Construccion multietapa | La etapa `builder` instala las dependencias en `/opt/venv`. La etapa `runtime` copia solo ese entorno y el codigo, sin pip, sin cache y sin herramientas de compilacion. |
+| Imagen base minimalista | `python:3.12-slim-bookworm` (Debian reducida). Se descarto Alpine porque usa musl: pandas, numpy, lxml y psycopg publican sus paquetes precompilados para glibc y en Alpine habria que compilarlos. Para PostgreSQL se usa la imagen oficial `postgres:17-alpine`. |
+| Minimo privilegio | Usuario `app` (UID 10001) sin shell, activado con `USER app`. El codigo pertenece a root y es de solo lectura. En `compose.yaml` se añaden `read_only`, `cap_drop: ALL` y `no-new-privileges`. |
+| Cache de capas | `requirements.txt` se copia e instala antes que el codigo: si solo cambia el codigo, Docker reutiliza la capa de dependencias. |
+| Puertos y salud | `EXPOSE 8000` y `HEALTHCHECK` contra `/health`. |
+
+### 9.3 Ejecucion
+
+    git clone https://github.com/andrespitia/CloudData.git
+    cd CloudData
+    cp .env.example .env
+    docker compose up -d --build --wait
+    docker compose ps
+
+| Que | Direccion |
+| --- | --- |
+| Microservicio 1 (documentacion interactiva) | http://localhost:8000/docs |
+| Microservicio 2 (documentacion interactiva) | http://localhost:8001/docs |
+| Indicadores | http://localhost:8001/kpi/ventas |
+
+Con los datos de ejemplo, `/kpi/ventas` devuelve 9 ventas por un total de 1.762.000.
+
+### 9.4 Integracion continua (`.github/workflows/ci.yml`)
+
+Se ejecuta en cada `push` y `pull_request` a `main`.
+
+| Job | Que hace |
+| --- | --- |
+| `lint` | `ruff` (Python), `hadolint` (los dos Dockerfiles) y validacion de `compose.yaml` |
+| `unitarias` | `pytest` de cada microservicio (matriz) |
+| `integracion` | Levanta los 3 contenedores y ejecuta `tests/integracion`. Comprueba ademas que los datos sobreviven a un reinicio y que los servicios no corren como root |
+| `publicar` | Publica las imagenes en GitHub Container Registry (solo en `push`) |
+
+| Evento | Etiquetas de la imagen |
+| --- | --- |
+| Commit en `main` | `sha-<hash corto>` y `latest` |
+| Etiqueta `vX.Y.Z` | `X.Y.Z`, `X.Y` y `sha-<hash corto>` |
+
+Imagenes publicadas:
+- `ghcr.io/andrespitia/clouddata-carga-limpieza`
+- `ghcr.io/andrespitia/clouddata-reportes`
+
+### 9.5 Entorno de pruebas
+
+El proyecto se ejecuta y prueba en una maquina virtual Linux en Microsoft Azure con Docker Engine y Docker Compose, administrada por SSH desde MobaXterm, porque mi equipo local no permitia ejecutar Docker. En ella se verifico: los 3 contenedores en estado `healthy`, la persistencia de los datos tras `docker compose down` y `up`, el usuario no root (`uid=10001`), el sistema de archivos de solo lectura, el aislamiento de la red `backend` y las pruebas de integracion (`3 passed`).
