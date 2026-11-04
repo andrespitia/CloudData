@@ -12,7 +12,7 @@ from app.procesamiento import FormatoNoSoportado, carga_inicial, procesar_archiv
 @asynccontextmanager
 async def ciclo_de_vida(_app: FastAPI):
     almacenamiento.inicializar()
-    
+
     carga_inicial(os.getenv("CARGA_INICIAL_DIR"))
     yield
 

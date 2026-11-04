@@ -1,0 +1,9 @@
+# Configuracion del linter de Python
+line-length = 110
+target-version = "py312"
+
+[lint]
+select = ["E", "W", "F", "I", "B", "UP"]
+
+[lint.isort]
+known-first-party = ["app"]

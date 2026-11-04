@@ -6,7 +6,7 @@ inicial de ejemplos y desde las pruebas.
 
 import io
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -26,7 +26,7 @@ class FormatoNoSoportado(Exception):
 
 
 def nuevo_id_carga() -> str:
-    marca = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    marca = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
     return f"c-{marca}-{uuid.uuid4().hex[:6]}"
 
 
