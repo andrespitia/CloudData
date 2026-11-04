@@ -1,6 +1,6 @@
 #Esta es la prueba de integracion
 #docker compose up -d --build --wait
-# 
+#
 
 import json
 import os
@@ -65,7 +65,7 @@ def test_carga_nueva_se_refleja_en_reportes():
     assert get(f"{REPORTES}/kpi/ventas")["numero_ventas"] == antes + 1
     assert get(f"{CARGA}/cargas/{carga['id_carga']}") == carga
 
-    
+
     repetida = subir_csv("integracion.csv", csv)
     assert repetida["cargadas"] == 0
     assert repetida["descartadas"]["ya_registradas"] == 1
