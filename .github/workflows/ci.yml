@@ -1,0 +1,164 @@
+name: ci
+
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]          
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Linters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Linter de Python (ruff)
+        run: |
+          pip install ruff==0.9.10
+          ruff check .
+
+      - name: Linter de Dockerfile - carga-limpieza (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: services/carga-limpieza/Dockerfile
+
+      - name: Linter de Dockerfile - reportes (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: services/reportes/Dockerfile
+
+      - name: Sintaxis de compose.yaml
+        run: docker compose config --quiet
+
+  unitarias:
+    name: Pruebas unitarias (${{ matrix.servicio }})
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        servicio: [carga-limpieza, reportes]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.servicio }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/${{ matrix.servicio }}/requirements*.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Ejecutar pruebas
+        run: pytest -v
+
+  integracion:
+    name: Pruebas de integración (Docker Compose)
+    needs: unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar variables de entorno
+        run: cp .env.example .env
+
+      - name: Levantar el entorno (3 contenedores)
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Estado de los contenedores
+        run: docker compose ps
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Ejecutar pruebas de integración
+        run: |
+          pip install pytest==8.3.4
+          CLOUDDATA_E2E=1 pytest tests/integracion -v
+
+      - name: Comprobar que los datos sobreviven a un reinicio
+        run: |
+          antes=$(curl -sf http://localhost:8001/kpi/ventas | python3 -c "import json,sys; print(json.load(sys.stdin)['numero_ventas'])")
+          docker compose down                       # sin -v: los volúmenes se conservan
+          docker compose up -d --wait --wait-timeout 180
+          despues=$(curl -sf http://localhost:8001/kpi/ventas | python3 -c "import json,sys; print(json.load(sys.stdin)['numero_ventas'])")
+          echo "Ventas antes: $antes  /  después: $despues"
+          test "$antes" = "$despues"
+
+      - name: Comprobar que los contenedores no se ejecutan como root
+        run: |
+          for s in carga-limpieza reportes; do
+            usuario=$(docker compose exec -T "$s" id -u)
+            echo "$s se ejecuta con UID $usuario"
+            test "$usuario" != "0"
+          done
+
+      - name: Registros de los contenedores
+        if: always()
+        run: docker compose logs
+
+      - name: Apagar y limpiar
+        if: always()
+        run: docker compose down -v
+
+  publicar:
+    name: Publicar imagen (${{ matrix.servicio }})
+    needs: integracion
+    if: github.event_name == 'push'          # en los Pull Request no se publica
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write                         # permiso para subir a ghcr.io
+    strategy:
+      matrix:
+        servicio: [carga-limpieza, reportes]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calcular etiquetas de la imagen
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/clouddata-${{ matrix.servicio }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Construir y publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.servicio }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.servicio }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.servicio }}
