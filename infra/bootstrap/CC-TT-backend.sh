@@ -24,7 +24,8 @@ az storage account blob-service-properties update \
   --enable-versioning true -o table
 
 echo "Contenedor privado para el estado"
-az storage container create \
-  --name "$CONTENEDOR" --account-name "$CUENTA" --auth-mode key -o table
+az storage container-rm create \
+  --name "$CONTENEDOR" --storage-account "$CUENTA" --resource-group "$GRUPO" \
+  --public-access off -o table
 
 echo "Backend listo: $GRUPO / $CUENTA / $CONTENEDOR"
