@@ -1,0 +1,4 @@
+#Copia este archivo como terraform.tfvars y ajusta los valores.
+region   = "denmarkeast"
+proyecto = "clouddata"
+entorno  = "dev"
