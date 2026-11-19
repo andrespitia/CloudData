@@ -4,12 +4,14 @@ variable "region" {
   default     = "denmarkeast"
 }
 
+#nombre del grupo de recursos
 variable "proyecto" {
   description = "Prefijo para nombrar los recursos."
   type        = string
   default     = "clouddata"
 }
 
+#entorno de desarrollo nombre dev del grupo
 variable "entorno" {
   description = "Entorno de despliegue."
   type        = string
