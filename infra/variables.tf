@@ -25,3 +25,8 @@ variable "etiquetas" {
     gestionado = "terraform"
   }
 }
+
+variable "ip_permitida" {
+  description = "IP publica del administrador en formato cidr en este caso mi ip."
+  type        = string
+}
